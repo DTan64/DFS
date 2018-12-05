@@ -14,11 +14,13 @@
 #include <stdbool.h>
 
 #define MAXBUFSIZE 2048
+#define SERVER_NUM 4
 
 typedef struct ServerConf {
   char* ip;
   char* port;
   int number;
+  struct sockaddr_in remote_addr;
 } ServerConf;
 
 void readConf(char* confName, ServerConf* servers, char** username, char** password);
@@ -27,7 +29,7 @@ int main (int argc, char * argv[])
 {
 
 	int nbytes, readBytes;                             // number of bytes send by sendto()
-	int sock;                               //this will be our socket
+	int socks[SERVER_NUM];                               //this will be our socket
 	char buffer[MAXBUFSIZE];
 	char fileBuffer[MAXBUFSIZE];
 	bool flag = false;
@@ -42,70 +44,67 @@ int main (int argc, char * argv[])
 	char exitServer[] = "exit";
 	char over[] = "Over";
 	int fd;
+  int i;
   FILE* confFD;
 	char* splitInput;
   char* saveptr;
   char* username;
   char* password;
   char* ip;
-  ServerConf servers[4];
+  ServerConf servers[SERVER_NUM];
 
 	if (argc < 2) {
 		printf("USAGE: <dfc.conf> \n");
 		exit(1);
 	}
 
+  // Read conf file
   readConf(argv[1], servers, &username, &password);
 
-  int i;
-  printf("Username: %s\n", username);
-  printf("Password: %s\n", password);
-  for(i = 0; i < 4; i++) {
+  // Initialize sockaddr_in structs
+  for(i = 0; i < SERVER_NUM; i++) {
     printf("number: %i\n", servers[i].number);
     printf("ip: %s\n", servers[i].ip);
     printf("port: %s\n", servers[i].port);
+    bzero(&servers[i].remote_addr, sizeof(servers[i].remote_addr));
+    servers[i].remote_addr.sin_family = AF_INET;
+    servers[i].remote_addr.sin_port = htons(atoi(servers[i].port));
+    servers[i].remote_addr.sin_addr.s_addr = inet_addr(servers[i].ip);
   }
 
+	// bzero(&remote_addr,sizeof(remote_addr));               //zero the struct
+	// remote_addr.sin_family = AF_INET;                 //address family
+	// remote_addr.sin_port = htons(10001);      //sets port to network byte order
+	// remote_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //sets remote IP address
 
 
+  for(i = 0; i < SERVER_NUM; i++) {
+    if ((socks[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+  		printf("unable to create socket");
+      return -1;
+  	}
 
-	bzero(&remote_addr,sizeof(remote_addr));               //zero the struct
-	remote_addr.sin_family = AF_INET;                 //address family
-	remote_addr.sin_port = htons(10001);      //sets port to network byte order
-	remote_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //sets remote IP address
-
-	//Causes the system to create a generic socket of type UDP (datagram)
-	if ((sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-		printf("unable to create socket");
-    return -1;
-	}
-
-  if(connect(sock, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0) {
-    printf("Error on connect.\n");
-    return -1;
+    if(connect(socks[i], (struct sockaddr *)&servers[i].remote_addr, sizeof(servers[i].remote_addr)) < 0) {
+      printf("Error on connect %i.\n", i);
+      return -1;
+    }
   }
 
+	// while(1) {
+	// 	printf("\n\nHere is a list of commands: [get, put, ls, delete, exit]\n");
+	// 	printf("What would you like to do?\n");
+	// 	fgets(userInput, MAXBUFSIZE, stdin);
+	// 	splitInput = strtok(userInput, " ");
+	// 	printf("EXECUTING: %s\n", splitInput);
+  //   write(sock, get, strlen(get));
+  //   nbytes = read(sock, buffer, MAXBUFSIZE);
+  //   printf("BUFFER: %s\n", buffer);
+  //
+	// }
 
-	/******************
-	  sendto() sends immediately.
-	  it will report an error if the message fails to leave the computer
-	  however, with UDP, there is no error if the message is lost in the network once it leaves the computer.
-	 ******************/
-	struct sockaddr_in server_addr;
-	unsigned int addr_length= sizeof(server_addr);
-
-	while(1) {
-		printf("\n\nHere is a list of commands: [get, put, ls, delete, exit]\n");
-		printf("What would you like to do?\n");
-		fgets(userInput, MAXBUFSIZE, stdin);
-		splitInput = strtok(userInput, " ");
-		printf("EXECUTING: %s\n", splitInput);
-    write(sock, get, strlen(get));
-    nbytes = read(sock, buffer, MAXBUFSIZE);
-    printf("BUFFER: %s\n", buffer);
-
-	}
-	close(sock);
+  for(i = 0; i < SERVER_NUM; i++) {
+    close(socks[i]);
+  }
 }
 
 void readConf(char* confName, ServerConf* servers, char** username, char** password)
