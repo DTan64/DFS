@@ -32,6 +32,7 @@ int main (int argc, char * argv[])
 	int socks[SERVER_NUM];                               //this will be our socket
 	char buffer[MAXBUFSIZE];
 	char fileBuffer[MAXBUFSIZE];
+	char sendBuffer[MAXBUFSIZE];
 	bool flag = false;
 	char userInput[MAXBUFSIZE];
 	char fileName[MAXBUFSIZE];
@@ -45,6 +46,7 @@ int main (int argc, char * argv[])
 	char over[] = "Over";
 	int fd;
   int i;
+  bool authenticated = false;
   FILE* confFD;
 	char* splitInput;
   char* saveptr;
@@ -77,7 +79,7 @@ int main (int argc, char * argv[])
 	// remote_addr.sin_port = htons(10001);      //sets port to network byte order
 	// remote_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //sets remote IP address
 
-
+  // Setup connections to each server
   for(i = 0; i < SERVER_NUM; i++) {
     if ((socks[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
   		printf("unable to create socket");
@@ -89,6 +91,28 @@ int main (int argc, char * argv[])
       return -1;
     }
   }
+
+  // Send credentials
+  bzero(&sendBuffer, sizeof(sendBuffer));
+  strcat(sendBuffer, username);
+  strcat(sendBuffer, " ");
+  strcat(sendBuffer, password);
+
+  for(i = 0; i < SERVER_NUM; i++) {
+    bzero(&buffer, sizeof(buffer));
+    write(socks[i], sendBuffer, strlen(sendBuffer));
+    nbytes = read(socks[i], buffer, MAXBUFSIZE);
+    if(!strcmp(buffer, "VALID")) {
+      authenticated = true;
+    }
+    else {
+      authenticated = false;
+    }
+  }
+  if(authenticated) {
+    printf("AUTH WORKS!\n");
+  }
+
 
 	// while(1) {
 	// 	printf("\n\nHere is a list of commands: [get, put, ls, delete, exit]\n");

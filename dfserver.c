@@ -20,6 +20,7 @@
 int listening = 1;
 
 void INThandler(int sig);
+bool authHandler(char* credentials);
 
 int main (int argc, char * argv[] )
 {
@@ -30,6 +31,8 @@ int main (int argc, char * argv[] )
 	char buffer[MAXBUFSIZE];             //a buffer to store our received message
 	int fd;
 	int client_length = sizeof(client_addr);
+  char authTrue[] = "VALID";
+  char authFalse[] = "INVALID";
 
 	DIR* dir;
 	struct dirent* in_file;
@@ -98,8 +101,17 @@ int main (int argc, char * argv[] )
  	       exit(1);
  	    }
 
-      printf("BUFFER: %s\n", buffer);
-      write(clientSock, buffer, strlen(buffer));
+      // Auth
+      if(!authHandler(buffer)) {
+        printf("Invalid credentials\n");
+        write(clientSock, authFalse, strlen(authFalse));
+        close(clientSock);
+        exit(0);
+      }
+      else {
+        write(clientSock, authTrue, strlen(authTrue));
+      }
+
       close(clientSock);
       exit(0);
     }
@@ -115,4 +127,26 @@ void INThandler(int sig)
 	signal(sig, SIG_IGN);
 	listening = 0;
 	exit(0);
+}
+
+bool authHandler(char* credentials)
+{
+
+  FILE* confFD;
+  char fileBuffer[MAXBUFSIZE];
+
+  confFD = fopen("dfs.conf", "r");
+  if(confFD == NULL) {
+    printf("Error opening file.\n");
+    exit(0);
+  }
+
+  while(fgets(fileBuffer, sizeof(fileBuffer), confFD) != NULL) {
+    fileBuffer[strlen(fileBuffer) - 1] = '\0';
+    if(!strcmp(fileBuffer, credentials)) {
+      return true;
+    }
+  }
+  return false;
+
 }
