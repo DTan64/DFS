@@ -110,7 +110,7 @@ int main (int argc, char * argv[])
 
 void readConf(char* confName, ServerConf* servers, char** username, char** password)
 {
-  // Read conf file
+
   FILE* confFD;
   char* saveptr;
 	char* splitInput;
@@ -129,12 +129,14 @@ void readConf(char* confName, ServerConf* servers, char** username, char** passw
         splitInput = strtok_r(fileBuffer, " ", &saveptr);
         splitInput = strtok_r(NULL, " ", &saveptr);
         *username = (char*) malloc(strlen(splitInput));
+        splitInput[strlen(splitInput) - 1] = '\0';
         strcpy(*username, splitInput);
       }
       else if(!strncmp(&fileBuffer[0], "P", 1)) {
         splitInput = strtok_r(fileBuffer, " ", &saveptr);
         splitInput = strtok_r(NULL, " ", &saveptr);
         *password = (char*) malloc(strlen(splitInput));
+        splitInput[strlen(splitInput) - 1] = '\0';
         strcpy(*password, splitInput);
       }
       else {
@@ -147,6 +149,7 @@ void readConf(char* confName, ServerConf* servers, char** username, char** passw
         strcpy(servers[serverNum - 1].ip, ip);
         ip = strtok_r(NULL, ":", &saveptr);
         servers[serverNum - 1].port = (char *) malloc(strlen(ip));
+        ip[strlen(ip) - 1] = '\0';
         strcpy(servers[serverNum - 1].port, ip);
       }
     }
