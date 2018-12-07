@@ -94,7 +94,7 @@ int main (int argc, char * argv[] )
 
     if(pid == 0) {
       close(sock);
- 	 	  bzero(buffer,sizeof(buffer));
+ 	 	  bzero(&buffer,sizeof(buffer));
       nbytes = read(clientSock, buffer, MAXBUFSIZE);
       if(nbytes < 0) {
  	       perror("ERROR reading from socket");
@@ -103,7 +103,6 @@ int main (int argc, char * argv[] )
 
       // Auth
       if(!authHandler(buffer)) {
-        printf("Invalid credentials\n");
         write(clientSock, authFalse, strlen(authFalse));
         close(clientSock);
         exit(0);
@@ -111,6 +110,37 @@ int main (int argc, char * argv[] )
       else {
         write(clientSock, authTrue, strlen(authTrue));
       }
+
+			while(1) {
+				bzero(&buffer,sizeof(buffer));
+				printf("Recieving bytes...\n");
+				nbytes = read(clientSock, buffer, MAXBUFSIZE);
+				printf("Recieved: %s\n", buffer);
+
+				if(!strcmp(buffer, "get")) {
+				  printf("EXECUTING: %s\n", buffer);
+		    }
+		    else if(!strcmp(buffer, "put")) {
+				  printf("EXECUTING: %s\n", buffer);
+					bzero(&buffer,sizeof(buffer));
+					nbytes = read(clientSock, buffer, MAXBUFSIZE);
+					printf("FileName: %s\n", buffer);
+					bzero(&buffer,sizeof(buffer));
+					nbytes = read(clientSock, buffer, MAXBUFSIZE);
+					printf("File Contents: %s\n", buffer);
+
+		    }
+		    else if(!strcmp(buffer, "list")) {
+		      printf("EXECUTING: %s\n", buffer);
+		    }
+				else if(!strcmp(buffer, "exit")) {
+		      printf("EXECUTING: %s\n", buffer);
+					break;
+				}
+		    else {
+		      printf("Command unknown.\n");
+		    }
+			}
 
       close(clientSock);
       exit(0);

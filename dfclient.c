@@ -11,10 +11,15 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <errno.h>
+#include <sys/stat.h>
 #include <stdbool.h>
+//#include <openssl/md5.h>
 
 #define MAXBUFSIZE 2048
 #define SERVER_NUM 4
+int listening = 1;
+
+void INThandler(int sig);
 
 typedef struct ServerConf {
   char* ip;
@@ -54,6 +59,18 @@ int main (int argc, char * argv[])
   char* password;
   char* ip;
   ServerConf servers[SERVER_NUM];
+  int fileSize = 0;
+  int pieceSize1 = 0;
+  int pieceSize2 = 0;
+  int pieceSize3 = 0;
+  int pieceSize4 = 0;
+	struct stat st;
+  int hashValue;
+
+  int n;
+  //MD5_CTX c;
+  char buf[512];
+  ssize_t bytes;
 
 	if (argc < 2) {
 		printf("USAGE: <dfc.conf> \n");
@@ -65,9 +82,6 @@ int main (int argc, char * argv[])
 
   // Initialize sockaddr_in structs
   for(i = 0; i < SERVER_NUM; i++) {
-    printf("number: %i\n", servers[i].number);
-    printf("ip: %s\n", servers[i].ip);
-    printf("port: %s\n", servers[i].port);
     bzero(&servers[i].remote_addr, sizeof(servers[i].remote_addr));
     servers[i].remote_addr.sin_family = AF_INET;
     servers[i].remote_addr.sin_port = htons(atoi(servers[i].port));
@@ -109,26 +123,107 @@ int main (int argc, char * argv[])
       authenticated = false;
     }
   }
+
   if(authenticated) {
-    printf("AUTH WORKS!\n");
+    printf("Validated credentials...!\n\n");
+  }
+  else {
+    printf("403!!! Incorrect credentials\n\n");
+    for(i = 0; i < SERVER_NUM; i++) {
+      close(socks[i]);
+    }
+    exit(0);
   }
 
+	signal(SIGINT, INThandler);
+	while(listening) {
+    bzero(&buffer, sizeof(buffer));
+    bzero(&userInput, sizeof(userInput));
+    bzero(&splitInput, sizeof(splitInput));
+		printf("Here is a list of commands: [get <file name>, put <file name>, list, exit]\n");
+		printf("What would you like to do?\n");
+		fgets(userInput, MAXBUFSIZE, stdin);
+		splitInput = strtok(userInput, " ");
 
-	// while(1) {
-	// 	printf("\n\nHere is a list of commands: [get, put, ls, delete, exit]\n");
-	// 	printf("What would you like to do?\n");
-	// 	fgets(userInput, MAXBUFSIZE, stdin);
-	// 	splitInput = strtok(userInput, " ");
-	// 	printf("EXECUTING: %s\n", splitInput);
-  //   write(sock, get, strlen(get));
-  //   nbytes = read(sock, buffer, MAXBUFSIZE);
-  //   printf("BUFFER: %s\n", buffer);
-  //
-	// }
+    if(!strcmp(splitInput, "get")) {
+		  printf("EXECUTING: %s\n", splitInput);
+    }
+    else if(!strcmp(splitInput, "put")) {
+		  printf("EXECUTING: %s\n", splitInput);
+		  splitInput = strtok(NULL, " ");
+      splitInput[strlen(splitInput) - 1] = '\0';
+      printf("FileName: %s\n", splitInput);
+      if(stat(splitInput, &st) == 0) {
+        fileSize = st.st_size; // In bytes
+        printf("File Size: %i\n", fileSize);
+      }
+
+      for(i = 0; i < SERVER_NUM; i++) {
+        write(socks[i], put, MAXBUFSIZE);
+      }
+
+      for(i = 0; i < SERVER_NUM; i++) {
+        write(socks[i], splitInput, MAXBUFSIZE);
+      }
+
+      // Calculate each piece size in bytes
+      pieceSize1 = fileSize / 4;
+      pieceSize2 = fileSize / 4;
+      pieceSize3 = fileSize / 4;
+      pieceSize4 = (fileSize / 4) + (fileSize % 4);
+      fd = open(splitInput,O_RDONLY);
+      printf("FileName: %s\n", splitInput);
+ 			bzero(&sendBuffer,sizeof(sendBuffer));
+      readBytes = read(fd, sendBuffer, pieceSize1);
+      printf("sendBuffer1: %s\n", sendBuffer);
+ 			// bzero(&sendBuffer,sizeof(sendBuffer));
+      // readBytes = read(fd, sendBuffer, pieceSize2);
+      // printf("sendBuffer2: %s\n", sendBuffer);
+      write(socks[0], sendBuffer, MAXBUFSIZE);
+      write(socks[1], sendBuffer, MAXBUFSIZE);
+      write(socks[2], sendBuffer, MAXBUFSIZE);
+      write(socks[3], sendBuffer, MAXBUFSIZE);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+    else if(!strcmp(splitInput, "list")) {
+      printf("EXECUTING: %s\n", splitInput);
+    }
+    else if(!strcmp(splitInput, "exit")) {
+      printf("EXECUTING: %s\n", splitInput);
+      for(i = 0; i < SERVER_NUM; i++) {
+        write(socks[i], exitServer, strlen(exitServer));
+        close(socks[i]);
+      }
+      return 1;
+    }
+    else {
+      printf("Command unknown.\n");
+    }
+
+	}
 
   for(i = 0; i < SERVER_NUM; i++) {
+    write(socks[i], exitServer, strlen(exitServer));
     close(socks[i]);
   }
+  exit(0);
 }
 
 void readConf(char* confName, ServerConf* servers, char** username, char** password)
@@ -144,7 +239,7 @@ void readConf(char* confName, ServerConf* servers, char** username, char** passw
     printf("Error opening file.\n");
     exit(0);
   }
-  bzero(fileBuffer,sizeof(fileBuffer));
+  bzero(&fileBuffer,sizeof(fileBuffer));
   int serverNum;
   while(1) {
     if(fgets(fileBuffer, sizeof(fileBuffer), confFD)!=NULL ) {
@@ -181,4 +276,11 @@ void readConf(char* confName, ServerConf* servers, char** username, char** passw
     }
   }
 
+}
+
+void INThandler(int sig)
+{
+	signal(sig, SIG_IGN);
+	listening = 0;
+	exit(0);
 }
