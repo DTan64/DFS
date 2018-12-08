@@ -36,6 +36,7 @@ int main (int argc, char * argv[] )
   char authTrue[] = "VALID";
   char authFalse[] = "INVALID";
 	char* splitInput;
+	int i;
 
 	DIR* dir;
 	struct dirent* in_file;
@@ -146,44 +147,45 @@ int main (int argc, char * argv[] )
 		    else if(!strcmp(buffer, "put")) {
 				  printf("EXECUTING: %s\n", buffer);
 
-					// Get fileName and piece number
-					bzero(&buffer,sizeof(buffer));
-					nbytes = read(clientSock, buffer, MAXBUFSIZE);
+					// Recieve 2 files
+					for(i = 0; i < 2; i++) {
+						// Get fileName and piece number
+						bzero(&buffer,sizeof(buffer));
+						nbytes = read(clientSock, buffer, MAXBUFSIZE);
 
-					// Create file path
-					bzero(&splitInput, sizeof(splitInput));
-					bzero(&filePath, sizeof(filePath));
-					splitInput = strtok(buffer, " "); // fileName
-					strcat(filePath, directoryPath);
-					strcat(filePath, "/");
-					strcat(filePath, ".");
-					strcat(filePath, splitInput);
-					splitInput = strtok(NULL, " "); // piece number
-					strcat(filePath, ".");
-					strcat(filePath, splitInput);
-					printf("filePath: %s\n", filePath);
+						// Create file path
+						bzero(&splitInput, sizeof(splitInput));
+						bzero(&filePath, sizeof(filePath));
+						splitInput = strtok(buffer, " "); // fileName
+						strcat(filePath, directoryPath);
+						strcat(filePath, "/");
+						strcat(filePath, ".");
+						strcat(filePath, splitInput);
+						splitInput = strtok(NULL, " "); // piece number
+						strcat(filePath, ".");
+						strcat(filePath, splitInput);
+						printf("filePath: %s\n", filePath);
 
-					// Recieve piece contents
-					fd = fopen(filePath, "w+");
-		  		if(fd == NULL) {
-		  			printf("Error opening file...%s\n", filePath);
-		  			exit(0);
-		  		}
+						// Recieve 1st piece contents
+						fd = fopen(filePath, "w+");
+			  		if(fd == NULL) {
+			  			printf("Error opening file...%s\n", filePath);
+			  			exit(0);
+			  		}
 
-					bzero(&buffer, sizeof(buffer));
-					while(1) {
-		  			nbytes = read(clientSock, buffer, MAXBUFSIZE);
-		  			if(!strcmp(buffer, "Over")) {
-							break;
-						}
-						printf("buffer: %s\n", buffer);
-		  			fprintf(fd, "%s", buffer);
-		  			bzero(&buffer, sizeof(buffer));
-		  		}
-					printf("outside loop\n");
-					fclose(fd);
-
-
+						bzero(&buffer, sizeof(buffer));
+						while(1) {
+			  			nbytes = read(clientSock, buffer, MAXBUFSIZE);
+			  			if(!strcmp(buffer, "Over")) {
+								break;
+							}
+							printf("buffer: %s\n", buffer);
+			  			fprintf(fd, "%s", buffer);
+			  			bzero(&buffer, sizeof(buffer));
+			  		}
+						printf("outside while loop\n");
+						fclose(fd);
+					}
 		    }
 		    else if(!strcmp(buffer, "list")) {
 		      printf("EXECUTING: %s\n", buffer);

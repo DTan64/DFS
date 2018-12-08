@@ -184,36 +184,53 @@ int main (int argc, char * argv[])
       // First piece
       strcat(splitInput, "1");
       write(socks[0], splitInput, MAXBUFSIZE);
+      write(socks[3], splitInput, MAXBUFSIZE);
       bzero(&sendBuffer,sizeof(sendBuffer));
       readBytes = read(fd, sendBuffer, pieceSize1);
       printf("sendBuffer1: %s\n", sendBuffer);
       write(socks[0], sendBuffer, MAXBUFSIZE);
+      write(socks[3], sendBuffer, MAXBUFSIZE);
       write(socks[0], over, MAXBUFSIZE);
+      write(socks[3], over, MAXBUFSIZE);
 
       // Second piece
-      // bzero(&sendBuffer,sizeof(sendBuffer));
-      // readBytes = read(fd, sendBuffer, pieceSize1);
-      // printf("sendBuffer2: %s\n", sendBuffer);
-      // write(socks[0], sendBuffer, MAXBUFSIZE);
-      // write(socks[1], sendBuffer, MAXBUFSIZE);
+      splitInput[strlen(splitInput) - 1] = '\0';
+      strcat(splitInput, "2");
+      write(socks[0], splitInput, MAXBUFSIZE);
+      write(socks[1], splitInput, MAXBUFSIZE);
+      bzero(&sendBuffer,sizeof(sendBuffer));
+      readBytes = read(fd, sendBuffer, pieceSize2);
+      printf("sendBuffer2: %s\n", sendBuffer);
+      write(socks[0], sendBuffer, MAXBUFSIZE);
+      write(socks[1], sendBuffer, MAXBUFSIZE);
+      write(socks[0], over, MAXBUFSIZE);
+      write(socks[1], over, MAXBUFSIZE);
 
+      // Third piece
+      splitInput[strlen(splitInput) - 1] = '\0';
+      strcat(splitInput, "3");
+      write(socks[1], splitInput, MAXBUFSIZE);
+      write(socks[2], splitInput, MAXBUFSIZE);
+      bzero(&sendBuffer,sizeof(sendBuffer));
+      readBytes = read(fd, sendBuffer, pieceSize3);
+      printf("sendBuffer3: %s\n", sendBuffer);
+      write(socks[1], sendBuffer, MAXBUFSIZE);
+      write(socks[2], sendBuffer, MAXBUFSIZE);
+      write(socks[1], over, MAXBUFSIZE);
+      write(socks[2], over, MAXBUFSIZE);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      // Fourth piece
+      splitInput[strlen(splitInput) - 1] = '\0';
+      strcat(splitInput, "4");
+      write(socks[2], splitInput, MAXBUFSIZE);
+      write(socks[3], splitInput, MAXBUFSIZE);
+      bzero(&sendBuffer,sizeof(sendBuffer));
+      readBytes = read(fd, sendBuffer, pieceSize4);
+      printf("sendBuffer4: %s\n", sendBuffer);
+      write(socks[3], sendBuffer, MAXBUFSIZE);
+      write(socks[3], sendBuffer, MAXBUFSIZE);
+      write(socks[2], over, MAXBUFSIZE);
+      write(socks[3], over, MAXBUFSIZE);
 
 
     }
