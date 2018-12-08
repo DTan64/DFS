@@ -29,10 +29,12 @@ int main (int argc, char * argv[] )
 	struct sockaddr_in server_addr, client_addr;     //"Internet socket address structure"
 	int nbytes;                        //number of bytes we receive in our message
 	char buffer[MAXBUFSIZE];             //a buffer to store our received message
+	char filePath[MAXBUFSIZE];             //a buffer to store our received message
 	int fd;
 	int client_length = sizeof(client_addr);
   char authTrue[] = "VALID";
   char authFalse[] = "INVALID";
+	char* splitInput;
 
 	DIR* dir;
 	struct dirent* in_file;
@@ -109,6 +111,22 @@ int main (int argc, char * argv[] )
       }
       else {
         write(clientSock, authTrue, strlen(authTrue));
+				splitInput = strtok(buffer, " ");
+ 	 	  	bzero(&filePath, sizeof(filePath));
+				strcat(filePath, "./");
+				strcat(filePath, argv[1]);
+				strcat(filePath, "/");
+				strcat(filePath, splitInput);
+				dir = opendir(filePath);
+				if(ENOENT == errno) {
+					printf("Directory doesn't exist\n");
+ 	 	  		bzero(&buffer, sizeof(buffer));
+					strcpy(buffer, filePath);
+ 	 	  		bzero(&filePath, sizeof(filePath));
+					strcat(filePath, "mkdir ");
+					strcat(filePath, buffer);
+					system(filePath);
+				}
       }
 
 			while(1) {

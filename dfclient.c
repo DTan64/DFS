@@ -173,16 +173,20 @@ int main (int argc, char * argv[])
       pieceSize4 = (fileSize / 4) + (fileSize % 4);
       fd = open(splitInput,O_RDONLY);
       printf("FileName: %s\n", splitInput);
- 			bzero(&sendBuffer,sizeof(sendBuffer));
+
+      // First piece
+      bzero(&sendBuffer,sizeof(sendBuffer));
       readBytes = read(fd, sendBuffer, pieceSize1);
       printf("sendBuffer1: %s\n", sendBuffer);
- 			// bzero(&sendBuffer,sizeof(sendBuffer));
-      // readBytes = read(fd, sendBuffer, pieceSize2);
-      // printf("sendBuffer2: %s\n", sendBuffer);
       write(socks[0], sendBuffer, MAXBUFSIZE);
-      write(socks[1], sendBuffer, MAXBUFSIZE);
-      write(socks[2], sendBuffer, MAXBUFSIZE);
-      write(socks[3], sendBuffer, MAXBUFSIZE);
+
+      // Second piece
+      bzero(&sendBuffer,sizeof(sendBuffer));
+      readBytes = read(fd, sendBuffer, pieceSize1);
+      printf("sendBuffer2: %s\n", sendBuffer);
+      write(socks[0], sendBuffer, MAXBUFSIZE);
+      write(socks[0], sendBuffer, MAXBUFSIZE);
+
 
 
 
