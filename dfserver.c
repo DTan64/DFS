@@ -30,6 +30,7 @@ int main (int argc, char * argv[] )
 	int nbytes;                        //number of bytes we receive in our message
 	char buffer[MAXBUFSIZE];             //a buffer to store our received message
 	char filePath[MAXBUFSIZE];             //a buffer to store our received message
+	char directoryPath[MAXBUFSIZE];
 	int fd;
 	int client_length = sizeof(client_addr);
   char authTrue[] = "VALID";
@@ -117,6 +118,7 @@ int main (int argc, char * argv[] )
 				strcat(filePath, argv[1]);
 				strcat(filePath, "/");
 				strcat(filePath, splitInput);
+				strcpy(directoryPath, filePath);
 				dir = opendir(filePath);
 				if(ENOENT == errno) {
 					printf("Directory doesn't exist\n");
@@ -126,6 +128,9 @@ int main (int argc, char * argv[] )
 					strcat(filePath, "mkdir ");
 					strcat(filePath, buffer);
 					system(filePath);
+				}
+				else {
+					closedir(dir);
 				}
       }
 
@@ -140,9 +145,28 @@ int main (int argc, char * argv[] )
 		    }
 		    else if(!strcmp(buffer, "put")) {
 				  printf("EXECUTING: %s\n", buffer);
+
+					// Get fileName and piece number
 					bzero(&buffer,sizeof(buffer));
 					nbytes = read(clientSock, buffer, MAXBUFSIZE);
-					printf("FileName: %s\n", buffer);
+
+					// Create file
+					bzero(&splitInput, sizeof(splitInput));
+					bzero(&filePath, sizeof(filePath));
+					splitInput = strtok(buffer, " "); // fileName
+					printf("fileName: %s\n", splitInput);
+					strcat(filePath, directoryPath);
+					strcat(filePath, "/");
+					strcat(filePath, ".");
+					strcat(filePath, splitInput);
+					splitInput = strtok(NULL, " "); // piece number
+					strcat(filePath, ".");
+					strcat(filePath, splitInput);
+					printf("filePath: %s\n", filePath);
+
+
+
+
 					bzero(&buffer,sizeof(buffer));
 					nbytes = read(clientSock, buffer, MAXBUFSIZE);
 					printf("File Contents: %s\n", buffer);

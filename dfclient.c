@@ -162,30 +162,40 @@ int main (int argc, char * argv[])
         write(socks[i], put, MAXBUFSIZE);
       }
 
-      for(i = 0; i < SERVER_NUM; i++) {
-        write(socks[i], splitInput, MAXBUFSIZE);
-      }
-
       // Calculate each piece size in bytes
       pieceSize1 = fileSize / 4;
       pieceSize2 = fileSize / 4;
       pieceSize3 = fileSize / 4;
       pieceSize4 = (fileSize / 4) + (fileSize % 4);
       fd = open(splitInput,O_RDONLY);
-      printf("FileName: %s\n", splitInput);
+      strcat(splitInput, " ");
+      // strcat(splitInput, "1");
+      // printf("FileName: %s\n", splitInput);
+      // splitInput[strlen(splitInput) - 1] = '\0';
+      // strcat(splitInput, "2");
+      // printf("FileName: %s\n", splitInput);
+
+      // for(i = 0; i < SERVER_NUM; i++) {
+      //   write(socks[i], splitInput, MAXBUFSIZE);
+      // }
+
+      // Case fileSize % 4 == 0
 
       // First piece
+      strcat(splitInput, "1");
+      write(socks[0], splitInput, MAXBUFSIZE);
       bzero(&sendBuffer,sizeof(sendBuffer));
       readBytes = read(fd, sendBuffer, pieceSize1);
       printf("sendBuffer1: %s\n", sendBuffer);
       write(socks[0], sendBuffer, MAXBUFSIZE);
 
       // Second piece
-      bzero(&sendBuffer,sizeof(sendBuffer));
-      readBytes = read(fd, sendBuffer, pieceSize1);
-      printf("sendBuffer2: %s\n", sendBuffer);
-      write(socks[0], sendBuffer, MAXBUFSIZE);
-      write(socks[0], sendBuffer, MAXBUFSIZE);
+      // bzero(&sendBuffer,sizeof(sendBuffer));
+      // readBytes = read(fd, sendBuffer, pieceSize1);
+      // printf("sendBuffer2: %s\n", sendBuffer);
+      // write(socks[0], sendBuffer, MAXBUFSIZE);
+      // write(socks[1], sendBuffer, MAXBUFSIZE);
+
 
 
 
