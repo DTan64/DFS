@@ -31,7 +31,7 @@ int main (int argc, char * argv[] )
 	char buffer[MAXBUFSIZE];             //a buffer to store our received message
 	char filePath[MAXBUFSIZE];             //a buffer to store our received message
 	char directoryPath[MAXBUFSIZE];
-	int fd;
+	FILE* fd;
 	int client_length = sizeof(client_addr);
   char authTrue[] = "VALID";
   char authFalse[] = "INVALID";
@@ -150,11 +150,10 @@ int main (int argc, char * argv[] )
 					bzero(&buffer,sizeof(buffer));
 					nbytes = read(clientSock, buffer, MAXBUFSIZE);
 
-					// Create file
+					// Create file path
 					bzero(&splitInput, sizeof(splitInput));
 					bzero(&filePath, sizeof(filePath));
 					splitInput = strtok(buffer, " "); // fileName
-					printf("fileName: %s\n", splitInput);
 					strcat(filePath, directoryPath);
 					strcat(filePath, "/");
 					strcat(filePath, ".");
@@ -164,12 +163,26 @@ int main (int argc, char * argv[] )
 					strcat(filePath, splitInput);
 					printf("filePath: %s\n", filePath);
 
+					// Recieve piece contents
+					fd = fopen(filePath, "w+");
+		  		if(fd == NULL) {
+		  			printf("Error opening file...%s\n", filePath);
+		  			exit(0);
+		  		}
 
+					bzero(&buffer, sizeof(buffer));
+					while(1) {
+		  			nbytes = read(clientSock, buffer, MAXBUFSIZE);
+		  			if(!strcmp(buffer, "Over")) {
+							break;
+						}
+						printf("buffer: %s\n", buffer);
+		  			fprintf(fd, "%s", buffer);
+		  			bzero(&buffer, sizeof(buffer));
+		  		}
+					printf("outside loop\n");
+					fclose(fd);
 
-
-					bzero(&buffer,sizeof(buffer));
-					nbytes = read(clientSock, buffer, MAXBUFSIZE);
-					printf("File Contents: %s\n", buffer);
 
 		    }
 		    else if(!strcmp(buffer, "list")) {

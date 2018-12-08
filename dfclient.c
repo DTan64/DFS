@@ -188,6 +188,7 @@ int main (int argc, char * argv[])
       readBytes = read(fd, sendBuffer, pieceSize1);
       printf("sendBuffer1: %s\n", sendBuffer);
       write(socks[0], sendBuffer, MAXBUFSIZE);
+      write(socks[0], over, MAXBUFSIZE);
 
       // Second piece
       // bzero(&sendBuffer,sizeof(sendBuffer));
