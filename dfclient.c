@@ -97,12 +97,12 @@ int main (int argc, char * argv[])
   for(i = 0; i < SERVER_NUM; i++) {
     if ((socks[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
   		printf("unable to create socket");
-      return -1;
   	}
 
     if(connect(socks[i], (struct sockaddr *)&servers[i].remote_addr, sizeof(servers[i].remote_addr)) < 0) {
       printf("Error on connect %i.\n", i);
-      return -1;
+      close(socks[i]);
+      socks[i] = -1;
     }
   }
 
@@ -113,6 +113,9 @@ int main (int argc, char * argv[])
   strcat(sendBuffer, password);
 
   for(i = 0; i < SERVER_NUM; i++) {
+    if(socks[i] == -1) {
+      continue;
+    }
     bzero(&buffer, sizeof(buffer));
     write(socks[i], sendBuffer, strlen(sendBuffer));
     nbytes = read(socks[i], buffer, MAXBUFSIZE);
@@ -159,6 +162,10 @@ int main (int argc, char * argv[])
       }
 
       for(i = 0; i < SERVER_NUM; i++) {
+        // Seems to not matter if here or not?
+        // if(socks[i] == -1) {
+        //   continue;
+        // }
         write(socks[i], put, MAXBUFSIZE);
       }
 
