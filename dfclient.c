@@ -147,9 +147,32 @@ int main (int argc, char * argv[])
 		printf("What would you like to do?\n");
 		fgets(userInput, MAXBUFSIZE, stdin);
 		splitInput = strtok(userInput, " ");
+    printf("userInput: %s\n", userInput);
 
     if(!strcmp(splitInput, "get")) {
 		  printf("EXECUTING: %s\n", splitInput);
+      splitInput = strtok(NULL, " ");
+      splitInput[strlen(splitInput) - 1] = '\0';
+
+      for(i = 0; i < SERVER_NUM; i++) {
+        write(socks[i], get, MAXBUFSIZE);
+        write(socks[i], splitInput, MAXBUFSIZE);
+      }
+
+      for(i = 0; i < SERVER_NUM; i ++) {
+
+        bzero(&buffer, sizeof(buffer));
+        nbytes = read(socks[i], buffer, MAXBUFSIZE);
+        printf("buffer: %s\n", buffer);
+
+
+      }
+
+
+
+
+
+
     }
     else if(!strcmp(splitInput, "put")) {
 		  printf("EXECUTING: %s\n", splitInput);
@@ -241,10 +264,10 @@ int main (int argc, char * argv[])
 
 
     }
-    else if(!strcmp(splitInput, "list")) {
+    else if(!strcmp(splitInput, "list\n")) {
       printf("EXECUTING: %s\n", splitInput);
     }
-    else if(!strcmp(splitInput, "exit")) {
+    else if(!strcmp(splitInput, "exit\n")) {
       printf("EXECUTING: %s\n", splitInput);
       for(i = 0; i < SERVER_NUM; i++) {
         write(socks[i], exitServer, strlen(exitServer));

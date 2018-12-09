@@ -41,6 +41,8 @@ int main (int argc, char * argv[] )
 	DIR* dir;
 	struct dirent* in_file;
 
+	char* fileName;
+
 	if (argc != 3)
 	{
 		printf ("USAGE: <server #> <port>\n");
@@ -141,8 +143,57 @@ int main (int argc, char * argv[] )
 				nbytes = read(clientSock, buffer, MAXBUFSIZE);
 				printf("Recieved: %s\n", buffer);
 
+
 				if(!strcmp(buffer, "get")) {
 				  printf("EXECUTING: %s\n", buffer);
+
+					bzero(&buffer,sizeof(buffer));
+					nbytes = read(clientSock, buffer, MAXBUFSIZE);
+					printf("buffer: %s\n", buffer); // fileName
+
+
+
+					// send back which numbers you have and files. and client handles rest.
+					// for ls maybe just check if a connection is there?
+
+					printf("directoryPath%s\n", directoryPath);
+					dir = opendir(directoryPath);
+					if(dir == NULL) {
+						printf("Error opening directory\n");
+						return -1;
+					}
+
+					// loop over directory
+					while((in_file = readdir(dir))) {
+						if(!strcmp(in_file->d_name, ".") || !strcmp(in_file->d_name, ".."))
+							continue;
+						printf("fileName %s\n", in_file->d_name);
+						fileName = (char *) malloc(255);
+						strcpy(fileName, in_file->d_name);
+						fileName++;
+						printf("fileName pointer: %s\n", fileName);
+						fileName[strlen(fileName) - 1] = '\0';
+						fileName[strlen(fileName) - 1] = '\0';
+						printf("fileName pointer: %s\n", fileName);
+						printf("fileName pointer og: %s\n", in_file->d_name);
+						if(!strcmp(buffer, fileName)) {
+							printf("Send file now!\n");
+						}
+
+
+
+					}
+
+
+
+
+
+					//write(clientSock, buffer, MAXBUFSIZE);
+
+
+
+
+
 		    }
 		    else if(!strcmp(buffer, "put")) {
 				  printf("EXECUTING: %s\n", buffer);
