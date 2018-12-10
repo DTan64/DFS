@@ -57,6 +57,7 @@ int main (int argc, char * argv[])
 	char exitServer[] = "exit";
 	char over[] = "Over";
 	int fd;
+  FILE* fp;
   int i;
   bool authenticated = false;
   FILE* confFD;
@@ -168,6 +169,10 @@ int main (int argc, char * argv[])
       }
 
 
+      bzero(&fileHolder.piece1, sizeof(fileHolder.piece1));
+      bzero(&fileHolder.piece2, sizeof(fileHolder.piece2));
+      bzero(&fileHolder.piece3, sizeof(fileHolder.piece3));
+      bzero(&fileHolder.piece4, sizeof(fileHolder.piece4));
       for(i = 0; i < SERVER_NUM; i++) {
         printf("waiting on socket %i\n", i);
         for(int j = 0; j < 2; j++) {
@@ -175,20 +180,16 @@ int main (int argc, char * argv[])
           nbytes = read(socks[i], buffer, MAXBUFSIZE);
           printf("buffer: %s\n", buffer);
           if(!strcmp(buffer, "1")) {
-            bzero(&fileHolder.piece1, sizeof(fileHolder.piece1));
             nbytes = read(socks[i], fileHolder.piece1, MAXBUFSIZE);
           }
           else if(!strcmp(buffer, "2")) {
-            bzero(&fileHolder.piece2, sizeof(fileHolder.piece2));
             nbytes = read(socks[i], fileHolder.piece2, MAXBUFSIZE);
           }
           else if(!strcmp(buffer, "3")) {
-            bzero(&fileHolder.piece3, sizeof(fileHolder.piece3));
             nbytes = read(socks[i], fileHolder.piece3, MAXBUFSIZE);
           }
           else if(!strcmp(buffer, "4")) {
             printf("hit\n");
-            bzero(&fileHolder.piece4, sizeof(fileHolder.piece4));
             nbytes = read(socks[i], fileHolder.piece4, MAXBUFSIZE);
           }
         }
@@ -199,11 +200,24 @@ int main (int argc, char * argv[])
       printf("piece3: %s\n", fileHolder.piece3);
       printf("piece4: %s\n", fileHolder.piece4);
 
-
-
-
-
-
+      // Check if all files are there
+      if(!strlen(fileHolder.piece1) || !strlen(fileHolder.piece2) || !strlen(fileHolder.piece3) || !strlen(fileHolder.piece4)) {
+        printf("File is incomplete.\n");
+      }
+      else {
+        // works but not for gzip encoding.
+        printf("splitInput: %s\n", splitInput);
+    		fp = fopen(splitInput, "w+");
+    		if(fp == NULL) {
+    			printf("Error opening file...%s\n", fileName);
+    			exit(-1);
+    		}
+        fwrite(fileHolder.piece1, 1, sizeof(fileHolder.piece1), fp);
+        fwrite(fileHolder.piece2, 1, sizeof(fileHolder.piece2), fp);
+        fwrite(fileHolder.piece3, 1, sizeof(fileHolder.piece3), fp);
+        fwrite(fileHolder.piece4, 1, sizeof(fileHolder.piece4), fp);
+        fclose(fp);
+      }
     }
     else if(!strcmp(splitInput, "put")) {
 		  printf("EXECUTING: %s\n", splitInput);
