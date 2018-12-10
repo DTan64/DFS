@@ -209,16 +209,6 @@ int main (int argc, char * argv[] )
 						}
 					}
 
-
-
-
-
-					//write(clientSock, buffer, MAXBUFSIZE);
-
-
-
-
-
 		    }
 		    else if(!strcmp(buffer, "put")) {
 				  printf("EXECUTING: %s\n", buffer);
@@ -242,7 +232,6 @@ int main (int argc, char * argv[] )
 						strcat(filePath, splitInput);
 						printf("filePath: %s\n", filePath);
 
-						// Recieve 1st piece contents
 						fd = fopen(filePath, "w+");
 			  		if(fd == NULL) {
 			  			printf("Error opening file...%s\n", filePath);
@@ -265,6 +254,39 @@ int main (int argc, char * argv[] )
 		    }
 		    else if(!strcmp(buffer, "list")) {
 		      printf("EXECUTING: %s\n", buffer);
+					dir = opendir(directoryPath);
+					if(dir == NULL) {
+						printf("Error opening directory\n");
+						return -1;
+					}
+
+					// loop over directory
+	  			bzero(&sendBuffer, sizeof(sendBuffer));
+					while((in_file = readdir(dir))) {
+						if(!strcmp(in_file->d_name, ".") || !strcmp(in_file->d_name, ".."))
+							continue;
+						printf("fileName %s\n", in_file->d_name);
+						fileName = (char *) malloc(255);
+						strcpy(fileName, in_file->d_name);
+						fileName++;
+						fileName[strlen(fileName) - 1] = '\0';
+						fileName[strlen(fileName) - 1] = '\0';
+						printf("fileName pointer: %s\n", fileName);
+						strcat(sendBuffer, in_file->d_name);
+						strcat(sendBuffer, " ");
+
+					}
+					printf("sendBuffer: %s\n", sendBuffer);
+					write(clientSock, sendBuffer, MAXBUFSIZE);
+
+
+
+
+
+
+
+
+
 		    }
 				else if(!strcmp(buffer, "exit")) {
 		      printf("EXECUTING: %s\n", buffer);

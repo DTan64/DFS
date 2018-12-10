@@ -35,7 +35,16 @@ typedef struct SplitFile {
   char piece4[MAXBUFSIZE];
 } SplitFile;
 
+typedef struct Files {
+  char name[100];
+  bool piece1;
+  bool piece2;
+  bool piece3;
+  bool piece4;
+} Files;
+
 void readConf(char* confName, ServerConf* servers, char** username, char** password);
+int getFileIndex(struct Files fileList[], char* fileName);
 
 int main (int argc, char * argv[])
 {
@@ -53,7 +62,7 @@ int main (int argc, char * argv[])
 	char get[] = "get";
 	char put[] = "put";
 	char delete[] = "delete";
-	char ls[] = "ls";
+	char list[] = "list";
 	char exitServer[] = "exit";
 	char over[] = "Over";
 	int fd;
@@ -68,6 +77,7 @@ int main (int argc, char * argv[])
   char* ip;
   ServerConf servers[SERVER_NUM];
   SplitFile fileHolder;
+  Files fileList[10];
   int fileSize = 0;
   int pieceSize1 = 0;
   int pieceSize2 = 0;
@@ -75,9 +85,10 @@ int main (int argc, char * argv[])
   int pieceSize4 = 0;
 	struct stat st;
   int hashValue;
+  int pieceNum;
+  int fileIndex;
 
   int n;
-  //MD5_CTX c;
   char buf[512];
   ssize_t bytes;
 
@@ -311,6 +322,68 @@ int main (int argc, char * argv[])
     }
     else if(!strcmp(splitInput, "list\n")) {
       printf("EXECUTING: %s\n", splitInput);
+      for(i = 0; i < SERVER_NUM; i++) {
+        // Seems to not matter if here or not?
+        // if(socks[i] == -1) {
+        //   continue;
+        // }
+        write(socks[i], list, MAXBUFSIZE);
+      }
+
+      for(i = 0; i < SERVER_NUM; i++) {
+        bzero(&buffer, sizeof(buffer));
+        bzero(&splitInput, sizeof(splitInput));
+        nbytes = read(socks[i], buffer, MAXBUFSIZE);
+        printf("buffer[%i]: %s\n", i, buffer);
+        splitInput = strtok(buffer, " ");
+        while(splitInput != NULL) {
+          printf("splitInput: %s\n", splitInput);
+          pieceNum = atoi(&splitInput[strlen(splitInput) - 1]);
+          printf("pieceNum: %d\n", pieceNum);
+          splitInput++;
+          splitInput[strlen(splitInput) - 1] = '\0';
+          splitInput[strlen(splitInput) - 1] = '\0';
+          printf("splitInput: %s\n", splitInput);
+
+          //get index
+          fileIndex = getFileIndex(fileList, splitInput);
+          switch (pieceNum) {
+            case 1:
+              fileList[fileIndex].piece1 = true;
+              break;
+            case 2:
+              fileList[fileIndex].piece2 = true;
+              break;
+            case 3:
+              fileList[fileIndex].piece3 = true;
+              break;
+            case 4:
+              fileList[fileIndex].piece4 = true;
+              break;
+          }
+          splitInput = strtok(NULL, " ");
+        }
+      }
+
+      for(i = 0; i < 10; i++) {
+        if(strlen(fileList[i].name) <=0) {
+          continue;
+        }
+        else if(fileList[i].piece1 && fileList[i].piece2 && fileList[i].piece3 && fileList[i].piece4) {
+          printf("%s\n", fileList[i].name);
+        }
+        else {
+          printf("%s [Incomplete]\n", fileList[i].name);
+        }
+      }
+
+
+
+
+
+
+
+
     }
     else if(!strcmp(splitInput, "exit\n")) {
       printf("EXECUTING: %s\n", splitInput);
@@ -390,4 +463,27 @@ void INThandler(int sig)
 	signal(sig, SIG_IGN);
 	listening = 0;
 	exit(0);
+}
+
+int getFileIndex(struct Files fileList[], char* fileName)
+{
+
+  int i;
+
+  for(i = 0; i < 10; i++) {
+    printf("fileName: %s\n", fileList[i].name);
+    if(strlen(fileList[i].name) <=0) {
+      printf("hit1\n");
+      strcpy(fileList[i].name, fileName);
+      return i;
+    }
+    else if(!strcmp(fileList[i].name, fileName)) {
+      return i;
+    }
+
+
+  }
+
+  return -1;
+
 }
