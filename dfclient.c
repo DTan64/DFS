@@ -28,6 +28,13 @@ typedef struct ServerConf {
   struct sockaddr_in remote_addr;
 } ServerConf;
 
+typedef struct SplitFile {
+  char piece1[MAXBUFSIZE];
+  char piece2[MAXBUFSIZE];
+  char piece3[MAXBUFSIZE];
+  char piece4[MAXBUFSIZE];
+} SplitFile;
+
 void readConf(char* confName, ServerConf* servers, char** username, char** password);
 
 int main (int argc, char * argv[])
@@ -59,6 +66,7 @@ int main (int argc, char * argv[])
   char* password;
   char* ip;
   ServerConf servers[SERVER_NUM];
+  SplitFile fileHolder;
   int fileSize = 0;
   int pieceSize1 = 0;
   int pieceSize2 = 0;
@@ -159,14 +167,37 @@ int main (int argc, char * argv[])
         write(socks[i], splitInput, MAXBUFSIZE);
       }
 
-      for(i = 0; i < SERVER_NUM; i ++) {
 
-        bzero(&buffer, sizeof(buffer));
-        nbytes = read(socks[i], buffer, MAXBUFSIZE);
-        printf("buffer: %s\n", buffer);
-
-
+      for(i = 0; i < SERVER_NUM; i++) {
+        printf("waiting on socket %i\n", i);
+        for(int j = 0; j < 2; j++) {
+          bzero(&buffer, sizeof(buffer));
+          nbytes = read(socks[i], buffer, MAXBUFSIZE);
+          printf("buffer: %s\n", buffer);
+          if(!strcmp(buffer, "1")) {
+            bzero(&fileHolder.piece1, sizeof(fileHolder.piece1));
+            nbytes = read(socks[i], fileHolder.piece1, MAXBUFSIZE);
+          }
+          else if(!strcmp(buffer, "2")) {
+            bzero(&fileHolder.piece2, sizeof(fileHolder.piece2));
+            nbytes = read(socks[i], fileHolder.piece2, MAXBUFSIZE);
+          }
+          else if(!strcmp(buffer, "3")) {
+            bzero(&fileHolder.piece3, sizeof(fileHolder.piece3));
+            nbytes = read(socks[i], fileHolder.piece3, MAXBUFSIZE);
+          }
+          else if(!strcmp(buffer, "4")) {
+            printf("hit\n");
+            bzero(&fileHolder.piece4, sizeof(fileHolder.piece4));
+            nbytes = read(socks[i], fileHolder.piece4, MAXBUFSIZE);
+          }
+        }
       }
+
+      printf("piece1: %s\n", fileHolder.piece1);
+      printf("piece2: %s\n", fileHolder.piece2);
+      printf("piece3: %s\n", fileHolder.piece3);
+      printf("piece4: %s\n", fileHolder.piece4);
 
 
 
@@ -257,7 +288,7 @@ int main (int argc, char * argv[])
       bzero(&sendBuffer,sizeof(sendBuffer));
       readBytes = read(fd, sendBuffer, pieceSize4);
       printf("sendBuffer4: %s\n", sendBuffer);
-      write(socks[3], sendBuffer, MAXBUFSIZE);
+      write(socks[2], sendBuffer, MAXBUFSIZE);
       write(socks[3], sendBuffer, MAXBUFSIZE);
       write(socks[2], over, MAXBUFSIZE);
       write(socks[3], over, MAXBUFSIZE);

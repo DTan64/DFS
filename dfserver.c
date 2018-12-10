@@ -29,17 +29,22 @@ int main (int argc, char * argv[] )
 	struct sockaddr_in server_addr, client_addr;     //"Internet socket address structure"
 	int nbytes;                        //number of bytes we receive in our message
 	char buffer[MAXBUFSIZE];             //a buffer to store our received message
+	char sendBuffer[MAXBUFSIZE];             //a buffer to store our received message
 	char filePath[MAXBUFSIZE];             //a buffer to store our received message
 	char directoryPath[MAXBUFSIZE];
 	FILE* fd;
+	int fp;
+	int readBytes;
 	int client_length = sizeof(client_addr);
   char authTrue[] = "VALID";
   char authFalse[] = "INVALID";
 	char* splitInput;
 	int i;
+	int fileSize;
 
 	DIR* dir;
 	struct dirent* in_file;
+	struct stat st;
 
 	char* fileName;
 
@@ -171,17 +176,37 @@ int main (int argc, char * argv[] )
 						fileName = (char *) malloc(255);
 						strcpy(fileName, in_file->d_name);
 						fileName++;
-						printf("fileName pointer: %s\n", fileName);
 						fileName[strlen(fileName) - 1] = '\0';
 						fileName[strlen(fileName) - 1] = '\0';
 						printf("fileName pointer: %s\n", fileName);
-						printf("fileName pointer og: %s\n", in_file->d_name);
 						if(!strcmp(buffer, fileName)) {
-							printf("Send file now!\n");
+		  			  bzero(&sendBuffer, sizeof(sendBuffer));
+		  			  bzero(&filePath, sizeof(filePath));
+							strcat(sendBuffer, &in_file->d_name[strlen(in_file->d_name) - 1]);
+							printf("sendBuffer: %s\n", sendBuffer);
+							write(clientSock, &sendBuffer, MAXBUFSIZE);
+							strcat(filePath, directoryPath);
+							strcat(filePath, "/");
+							strcat(filePath, in_file->d_name);
+							printf("filePath: %s\n", filePath);
+
+							fp = open(filePath, O_RDONLY);
+		  			  if(fp < 0) {
+		  			 	 printf("Error opening file.\n");
+		 				  	 exit(-1);
+		  			  }
+
+		  			  bzero(&sendBuffer, sizeof(sendBuffer));
+		  			  while(1) {
+		  			 	  readBytes = read(fp, sendBuffer, sizeof(sendBuffer));
+		  			 	  if(readBytes == 0) {
+									break;
+		  			 	  }
+		  			 	  write(clientSock, sendBuffer, MAXBUFSIZE);
+		  			  	bzero(&sendBuffer, sizeof(sendBuffer));
+		  			  }
+			 	 		 	close(fp);
 						}
-
-
-
 					}
 
 
