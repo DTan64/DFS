@@ -17,6 +17,8 @@
 
 #define MAXBUFSIZE 2048
 #define SERVER_NUM 4
+#define FILE_LIST_SIZE 15
+
 int listening = 1;
 
 void INThandler(int sig);
@@ -45,6 +47,11 @@ typedef struct Files {
 
 void readConf(char* confName, ServerConf* servers, char** username, char** password);
 int getFileIndex(struct Files fileList[], char* fileName);
+
+void sigpipe_handler()
+{
+    printf("Connection to server lost\n");
+}
 
 int main (int argc, char * argv[])
 {
@@ -77,7 +84,7 @@ int main (int argc, char * argv[])
   char* ip;
   ServerConf servers[SERVER_NUM];
   SplitFile fileHolder;
-  Files fileList[10];
+  Files fileList[FILE_LIST_SIZE];
   int fileSize = 0;
   int pieceSize1 = 0;
   int pieceSize2 = 0;
@@ -87,6 +94,7 @@ int main (int argc, char * argv[])
   int hashValue;
   int pieceNum;
   int fileIndex;
+  int len;
 
   int n;
   char buf[512];
@@ -114,6 +122,7 @@ int main (int argc, char * argv[])
 	// remote_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //sets remote IP address
 
   // Setup connections to each server
+  signal(SIGPIPE, sigpipe_handler);
   for(i = 0; i < SERVER_NUM; i++) {
     if ((socks[i] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
   		printf("unable to create socket");
@@ -216,7 +225,6 @@ int main (int argc, char * argv[])
         printf("File is incomplete.\n");
       }
       else {
-        // works but not for gzip encoding.
         printf("splitInput: %s\n", splitInput);
     		fp = fopen(splitInput, "w+");
     		if(fp == NULL) {
@@ -241,10 +249,6 @@ int main (int argc, char * argv[])
       }
 
       for(i = 0; i < SERVER_NUM; i++) {
-        // Seems to not matter if here or not?
-        // if(socks[i] == -1) {
-        //   continue;
-        // }
         write(socks[i], put, MAXBUFSIZE);
       }
 
@@ -324,13 +328,35 @@ int main (int argc, char * argv[])
       printf("EXECUTING: %s\n", splitInput);
       for(i = 0; i < SERVER_NUM; i++) {
         // Seems to not matter if here or not?
+        printf("inside loop\n");
         // if(socks[i] == -1) {
+        //   printf("hit\n");
         //   continue;
         // }
-        write(socks[i], list, MAXBUFSIZE);
+        len = write(socks[i], list, MAXBUFSIZE);
+        if(len < 0) {
+          printf("error\n");
+          continue;
+        }
+        printf("after write\n");
+        if(errno == ENOTCONN) {
+          printf("no connection\n");
+        }
+      }
+      printf("after first for loop\n");
+
+      // reset file pieces
+      for(i = 0 ; i < FILE_LIST_SIZE; i++) {
+        fileList[i].piece1 = false;
+        fileList[i].piece2 = false;
+        fileList[i].piece3 = false;
+        fileList[i].piece4 = false;
       }
 
       for(i = 0; i < SERVER_NUM; i++) {
+        if(socks[i] == -1) {
+          continue;
+        }
         bzero(&buffer, sizeof(buffer));
         bzero(&splitInput, sizeof(splitInput));
         nbytes = read(socks[i], buffer, MAXBUFSIZE);
@@ -365,7 +391,7 @@ int main (int argc, char * argv[])
         }
       }
 
-      for(i = 0; i < 10; i++) {
+      for(i = 0; i < FILE_LIST_SIZE; i++) {
         if(strlen(fileList[i].name) <=0) {
           continue;
         }
@@ -376,13 +402,6 @@ int main (int argc, char * argv[])
           printf("%s [Incomplete]\n", fileList[i].name);
         }
       }
-
-
-
-
-
-
-
 
     }
     else if(!strcmp(splitInput, "exit\n")) {
@@ -470,9 +489,9 @@ int getFileIndex(struct Files fileList[], char* fileName)
 
   int i;
 
-  for(i = 0; i < 10; i++) {
+  for(i = 0; i < FILE_LIST_SIZE; i++) {
     printf("fileName: %s\n", fileList[i].name);
-    if(strlen(fileList[i].name) <=0) {
+    if(strlen(fileList[i].name) <= 0) {
       printf("hit1\n");
       strcpy(fileList[i].name, fileName);
       return i;

@@ -146,6 +146,9 @@ int main (int argc, char * argv[] )
 				bzero(&buffer,sizeof(buffer));
 				printf("Recieving bytes...\n");
 				nbytes = read(clientSock, buffer, MAXBUFSIZE);
+				if(nbytes <= 0) {
+					break;
+				}
 				printf("Recieved: %s\n", buffer);
 
 
@@ -155,8 +158,6 @@ int main (int argc, char * argv[] )
 					bzero(&buffer,sizeof(buffer));
 					nbytes = read(clientSock, buffer, MAXBUFSIZE);
 					printf("buffer: %s\n", buffer); // fileName
-
-
 
 					// send back which numbers you have and files. and client handles rest.
 					// for ls maybe just check if a connection is there?
