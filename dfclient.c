@@ -48,6 +48,58 @@ typedef struct Files {
 void readConf(char* confName, ServerConf* servers, char** username, char** password);
 int getFileIndex(struct Files fileList[], char* fileName);
 
+int mod_hash(char *num) {
+    int res = 0;
+    unsigned long i;
+    for(i = 0; i < strlen(num); i++) {
+        // handle cases where num[i] is a to f
+        switch(num[i]) {
+            case 'a':
+                num[i] = 10;
+                break;
+            case 'b':
+                num[i] = 11;
+                break;
+            case 'c':
+                num[i] = 12;
+                break;
+            case 'd':
+                num[i] = 13;
+                break;
+            case 'e':
+                num[i] = 14;
+                break;
+            case 'f':
+                num[i] = 15;
+                break;
+            default:
+                num[i] = num[i] - '0';
+        }
+        res = (res*16 + num[i]) % 4; // following the rule xy (mod a) ≡ ((x (mod a) * y) (mod a))
+    }
+    return res;
+}
+
+int hash_file(char *file_name) {
+    char command[MAXBUFSIZE];
+    snprintf(command, MAXBUFSIZE, "md5 %s", file_name);
+    FILE *f = popen(command, "r");
+    char buf[MAXBUFSIZE];
+    while (fgets(buf, sizeof(buf), f) != 0) {
+        //printf("%s\n", buf);
+    }
+    pclose(f);
+    buf[strlen(buf) - 1] = '\0';
+    int i = 0;
+    while(buf[i] != '=') {
+        i++;
+    }
+
+    int hash = mod_hash(&buf[i+2]);
+    //printf("Hash Found: %d\n", hash);
+    return hash;
+}
+
 void sigpipe_handler()
 {
     printf("Connection to server lost\n");
@@ -140,6 +192,7 @@ int main (int argc, char * argv[])
   strcat(sendBuffer, username);
   strcat(sendBuffer, " ");
   strcat(sendBuffer, password);
+  printf("sendBuffer: %s\n", sendBuffer);
 
   for(i = 0; i < SERVER_NUM; i++) {
     if(socks[i] == -1) {
@@ -209,8 +262,8 @@ int main (int argc, char * argv[])
             nbytes = read(socks[i], fileHolder.piece3, MAXBUFSIZE);
           }
           else if(!strcmp(buffer, "4")) {
-            printf("hit\n");
             nbytes = read(socks[i], fileHolder.piece4, MAXBUFSIZE);
+            printf("hit: %s\n", fileHolder.piece4);
           }
         }
       }
@@ -252,75 +305,236 @@ int main (int argc, char * argv[])
         write(socks[i], put, MAXBUFSIZE);
       }
 
+      printf("file hash: %i\n", system("md5 text.txt"));
+
       // Calculate each piece size in bytes
       pieceSize1 = fileSize / 4;
       pieceSize2 = fileSize / 4;
       pieceSize3 = fileSize / 4;
       pieceSize4 = (fileSize / 4) + (fileSize % 4);
-      fd = open(splitInput,O_RDONLY);
+      fd = open(splitInput, O_RDONLY);
       strcat(splitInput, " ");
-      // strcat(splitInput, "1");
-      // printf("FileName: %s\n", splitInput);
-      // splitInput[strlen(splitInput) - 1] = '\0';
-      // strcat(splitInput, "2");
-      // printf("FileName: %s\n", splitInput);
+      printf("fileSize mod 4: %i\n", fileSize % 4);
 
-      // for(i = 0; i < SERVER_NUM; i++) {
-      //   write(socks[i], splitInput, MAXBUFSIZE);
-      // }
+      // Send File
+      switch (2) {
+        case 0:
+          // First piece
+          strcat(splitInput, "1");
+          write(socks[0], splitInput, MAXBUFSIZE);
+          write(socks[3], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize1);
+          printf("sendBuffer1: %s\n", sendBuffer);
+          write(socks[0], sendBuffer, MAXBUFSIZE);
+          write(socks[3], sendBuffer, MAXBUFSIZE);
+          write(socks[0], over, MAXBUFSIZE);
+          write(socks[3], over, MAXBUFSIZE);
 
-      // Case fileSize % 4 == 0
+          // Second piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "2");
+          write(socks[0], splitInput, MAXBUFSIZE);
+          write(socks[1], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize2);
+          printf("sendBuffer2: %s\n", sendBuffer);
+          write(socks[0], sendBuffer, MAXBUFSIZE);
+          write(socks[1], sendBuffer, MAXBUFSIZE);
+          write(socks[0], over, MAXBUFSIZE);
+          write(socks[1], over, MAXBUFSIZE);
 
-      // First piece
-      strcat(splitInput, "1");
-      write(socks[0], splitInput, MAXBUFSIZE);
-      write(socks[3], splitInput, MAXBUFSIZE);
-      bzero(&sendBuffer,sizeof(sendBuffer));
-      readBytes = read(fd, sendBuffer, pieceSize1);
-      printf("sendBuffer1: %s\n", sendBuffer);
-      write(socks[0], sendBuffer, MAXBUFSIZE);
-      write(socks[3], sendBuffer, MAXBUFSIZE);
-      write(socks[0], over, MAXBUFSIZE);
-      write(socks[3], over, MAXBUFSIZE);
+          // Third piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "3");
+          write(socks[1], splitInput, MAXBUFSIZE);
+          write(socks[2], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize3);
+          printf("sendBuffer3: %s\n", sendBuffer);
+          write(socks[1], sendBuffer, MAXBUFSIZE);
+          write(socks[2], sendBuffer, MAXBUFSIZE);
+          write(socks[1], over, MAXBUFSIZE);
+          write(socks[2], over, MAXBUFSIZE);
 
-      // Second piece
-      splitInput[strlen(splitInput) - 1] = '\0';
-      strcat(splitInput, "2");
-      write(socks[0], splitInput, MAXBUFSIZE);
-      write(socks[1], splitInput, MAXBUFSIZE);
-      bzero(&sendBuffer,sizeof(sendBuffer));
-      readBytes = read(fd, sendBuffer, pieceSize2);
-      printf("sendBuffer2: %s\n", sendBuffer);
-      write(socks[0], sendBuffer, MAXBUFSIZE);
-      write(socks[1], sendBuffer, MAXBUFSIZE);
-      write(socks[0], over, MAXBUFSIZE);
-      write(socks[1], over, MAXBUFSIZE);
+          // Fourth piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "4");
+          write(socks[2], splitInput, MAXBUFSIZE);
+          write(socks[3], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize4);
+          printf("sendBuffer4: %s\n", sendBuffer);
+          write(socks[2], sendBuffer, MAXBUFSIZE);
+          write(socks[3], sendBuffer, MAXBUFSIZE);
+          write(socks[2], over, MAXBUFSIZE);
+          write(socks[3], over, MAXBUFSIZE);
 
-      // Third piece
-      splitInput[strlen(splitInput) - 1] = '\0';
-      strcat(splitInput, "3");
-      write(socks[1], splitInput, MAXBUFSIZE);
-      write(socks[2], splitInput, MAXBUFSIZE);
-      bzero(&sendBuffer,sizeof(sendBuffer));
-      readBytes = read(fd, sendBuffer, pieceSize3);
-      printf("sendBuffer3: %s\n", sendBuffer);
-      write(socks[1], sendBuffer, MAXBUFSIZE);
-      write(socks[2], sendBuffer, MAXBUFSIZE);
-      write(socks[1], over, MAXBUFSIZE);
-      write(socks[2], over, MAXBUFSIZE);
+          break;
+        case 1:
+          // First piece
+          strcat(splitInput, "1");
+          write(socks[0], splitInput, MAXBUFSIZE);
+          write(socks[1], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize1);
+          printf("sendBuffer1: %s\n", sendBuffer);
+          write(socks[0], sendBuffer, MAXBUFSIZE);
+          write(socks[1], sendBuffer, MAXBUFSIZE);
+          write(socks[0], over, MAXBUFSIZE);
+          write(socks[1], over, MAXBUFSIZE);
 
-      // Fourth piece
-      splitInput[strlen(splitInput) - 1] = '\0';
-      strcat(splitInput, "4");
-      write(socks[2], splitInput, MAXBUFSIZE);
-      write(socks[3], splitInput, MAXBUFSIZE);
-      bzero(&sendBuffer,sizeof(sendBuffer));
-      readBytes = read(fd, sendBuffer, pieceSize4);
-      printf("sendBuffer4: %s\n", sendBuffer);
-      write(socks[2], sendBuffer, MAXBUFSIZE);
-      write(socks[3], sendBuffer, MAXBUFSIZE);
-      write(socks[2], over, MAXBUFSIZE);
-      write(socks[3], over, MAXBUFSIZE);
+          // Second piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "2");
+          write(socks[1], splitInput, MAXBUFSIZE);
+          write(socks[2], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize2);
+          printf("sendBuffer2: %s\n", sendBuffer);
+          write(socks[1], sendBuffer, MAXBUFSIZE);
+          write(socks[2], sendBuffer, MAXBUFSIZE);
+          write(socks[1], over, MAXBUFSIZE);
+          write(socks[2], over, MAXBUFSIZE);
+
+          // Third piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "3");
+          write(socks[2], splitInput, MAXBUFSIZE);
+          write(socks[3], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize3);
+          printf("sendBuffer3: %s\n", sendBuffer);
+          write(socks[2], sendBuffer, MAXBUFSIZE);
+          write(socks[3], sendBuffer, MAXBUFSIZE);
+          write(socks[2], over, MAXBUFSIZE);
+          write(socks[3], over, MAXBUFSIZE);
+
+          // Fourth piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "4");
+          write(socks[0], splitInput, MAXBUFSIZE);
+          write(socks[3], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize4);
+          printf("sendBuffer4: %s\n", sendBuffer);
+          write(socks[0], sendBuffer, MAXBUFSIZE);
+          write(socks[3], sendBuffer, MAXBUFSIZE);
+          write(socks[0], over, MAXBUFSIZE);
+          write(socks[3], over, MAXBUFSIZE);
+          break;
+        case 2:
+          // First piece
+          strcat(splitInput, "1");
+          write(socks[1], splitInput, MAXBUFSIZE);
+          write(socks[2], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize1);
+          printf("sendBuffer1: %s\n", sendBuffer);
+          write(socks[1], sendBuffer, MAXBUFSIZE);
+          write(socks[2], sendBuffer, MAXBUFSIZE);
+          write(socks[1], over, MAXBUFSIZE);
+          write(socks[2], over, MAXBUFSIZE);
+
+          // Second piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "2");
+          write(socks[2], splitInput, MAXBUFSIZE);
+          write(socks[3], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize2);
+          printf("sendBuffer2: %s\n", sendBuffer);
+          write(socks[2], sendBuffer, MAXBUFSIZE);
+          write(socks[3], sendBuffer, MAXBUFSIZE);
+          write(socks[2], over, MAXBUFSIZE);
+          write(socks[3], over, MAXBUFSIZE);
+
+          // Third piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "3");
+          write(socks[0], splitInput, MAXBUFSIZE);
+          write(socks[3], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize3);
+          printf("sendBuffer3: %s\n", sendBuffer);
+          write(socks[0], sendBuffer, MAXBUFSIZE);
+          write(socks[3], sendBuffer, MAXBUFSIZE);
+          write(socks[0], over, MAXBUFSIZE);
+          write(socks[3], over, MAXBUFSIZE);
+
+          // Fourth piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "4");
+          write(socks[0], splitInput, MAXBUFSIZE);
+          write(socks[1], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize4);
+          printf("sendBuffer4: %s\n", sendBuffer);
+          write(socks[0], sendBuffer, MAXBUFSIZE);
+          write(socks[1], sendBuffer, MAXBUFSIZE);
+          write(socks[0], over, MAXBUFSIZE);
+          write(socks[1], over, MAXBUFSIZE);
+
+          break;
+        case 3:
+          // First piece
+          strcat(splitInput, "1");
+          write(socks[2], splitInput, MAXBUFSIZE);
+          write(socks[3], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize1);
+          printf("sendBuffer1: %s\n", sendBuffer);
+          write(socks[2], sendBuffer, MAXBUFSIZE);
+          write(socks[3], sendBuffer, MAXBUFSIZE);
+          write(socks[2], over, MAXBUFSIZE);
+          write(socks[3], over, MAXBUFSIZE);
+
+          // Second piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "2");
+          write(socks[0], splitInput, MAXBUFSIZE);
+          write(socks[3], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize2);
+          printf("sendBuffer2: %s\n", sendBuffer);
+          write(socks[0], sendBuffer, MAXBUFSIZE);
+          write(socks[3], sendBuffer, MAXBUFSIZE);
+          write(socks[0], over, MAXBUFSIZE);
+          write(socks[3], over, MAXBUFSIZE);
+
+          // Third piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "3");
+          write(socks[0], splitInput, MAXBUFSIZE);
+          write(socks[1], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize3);
+          printf("sendBuffer3: %s\n", sendBuffer);
+          write(socks[0], sendBuffer, MAXBUFSIZE);
+          write(socks[1], sendBuffer, MAXBUFSIZE);
+          write(socks[0], over, MAXBUFSIZE);
+          write(socks[1], over, MAXBUFSIZE);
+
+          // Fourth piece
+          splitInput[strlen(splitInput) - 1] = '\0';
+          strcat(splitInput, "4");
+          write(socks[1], splitInput, MAXBUFSIZE);
+          write(socks[2], splitInput, MAXBUFSIZE);
+          bzero(&sendBuffer,sizeof(sendBuffer));
+          readBytes = read(fd, sendBuffer, pieceSize4);
+          printf("sendBuffer4: %s\n", sendBuffer);
+          write(socks[1], sendBuffer, MAXBUFSIZE);
+          write(socks[2], sendBuffer, MAXBUFSIZE);
+          write(socks[1], over, MAXBUFSIZE);
+          write(socks[2], over, MAXBUFSIZE);
+
+          break;
+        default:;
+      }
+
+      close(fd);
+
+
 
 
     }
@@ -360,16 +574,12 @@ int main (int argc, char * argv[])
         bzero(&buffer, sizeof(buffer));
         bzero(&splitInput, sizeof(splitInput));
         nbytes = read(socks[i], buffer, MAXBUFSIZE);
-        printf("buffer[%i]: %s\n", i, buffer);
         splitInput = strtok(buffer, " ");
         while(splitInput != NULL) {
-          printf("splitInput: %s\n", splitInput);
           pieceNum = atoi(&splitInput[strlen(splitInput) - 1]);
-          printf("pieceNum: %d\n", pieceNum);
           splitInput++;
           splitInput[strlen(splitInput) - 1] = '\0';
           splitInput[strlen(splitInput) - 1] = '\0';
-          printf("splitInput: %s\n", splitInput);
 
           //get index
           fileIndex = getFileIndex(fileList, splitInput);

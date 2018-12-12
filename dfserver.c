@@ -41,6 +41,7 @@ int main (int argc, char * argv[] )
 	char* splitInput;
 	int i;
 	int fileSize;
+	int len;
 
 	DIR* dir;
 	struct dirent* in_file;
@@ -193,20 +194,29 @@ int main (int argc, char * argv[] )
 
 							fp = open(filePath, O_RDONLY);
 		  			  if(fp < 0) {
-		  			 	 printf("Error opening file.\n");
-		 				  	 exit(-1);
+		  			 	 	printf("Error opening file.\n");
+		 				  	exit(-1);
 		  			  }
 
 		  			  bzero(&sendBuffer, sizeof(sendBuffer));
 		  			  while(1) {
+								printf("inside while loop %s\n", filePath);
 		  			 	  readBytes = read(fp, sendBuffer, sizeof(sendBuffer));
 		  			 	  if(readBytes == 0) {
+									printf("didn't read\n");
 									break;
 		  			 	  }
-		  			 	  write(clientSock, sendBuffer, MAXBUFSIZE);
+								printf("sending: %s\n", sendBuffer);
+		  			 	  len = write(clientSock, sendBuffer, MAXBUFSIZE);
+								if(len < 0) {
+									printf("ERROR ON SEND\n");
+								}
 		  			  	bzero(&sendBuffer, sizeof(sendBuffer));
 		  			  }
 			 	 		 	close(fp);
+						}
+						else {
+							printf("hit else\n");
 						}
 					}
 
@@ -231,7 +241,7 @@ int main (int argc, char * argv[] )
 						splitInput = strtok(NULL, " "); // piece number
 						strcat(filePath, ".");
 						strcat(filePath, splitInput);
-						printf("filePath: %s\n", filePath);
+						printf("filePath[%i]: %s\n", i, filePath);
 
 						fd = fopen(filePath, "w+");
 			  		if(fd == NULL) {
@@ -245,7 +255,6 @@ int main (int argc, char * argv[] )
 			  			if(!strcmp(buffer, "Over")) {
 								break;
 							}
-							printf("buffer: %s\n", buffer);
 			  			fprintf(fd, "%s", buffer);
 			  			bzero(&buffer, sizeof(buffer));
 			  		}
