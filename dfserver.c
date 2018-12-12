@@ -42,6 +42,7 @@ int main (int argc, char * argv[] )
 	int i;
 	int fileSize;
 	int len;
+	char fileDeleteBuffer[MAXBUFSIZE];
 
 	DIR* dir;
 	struct dirent* in_file;
@@ -219,6 +220,7 @@ int main (int argc, char * argv[] )
 							printf("hit else\n");
 						}
 					}
+					closedir(dir);
 
 		    }
 		    else if(!strcmp(buffer, "put")) {
@@ -234,6 +236,24 @@ int main (int argc, char * argv[] )
 						bzero(&splitInput, sizeof(splitInput));
 						bzero(&filePath, sizeof(filePath));
 						splitInput = strtok(buffer, " "); // fileName
+
+						// delete files with same name
+						if(i == 0) {
+							bzero(&fileDeleteBuffer, sizeof(fileDeleteBuffer));
+							strcat(fileDeleteBuffer, "rm ");
+							strcat(fileDeleteBuffer, directoryPath);
+							strcat(fileDeleteBuffer, "/.");
+							printf("system command: %s\n", fileDeleteBuffer);
+							strcat(fileDeleteBuffer, splitInput);
+							printf("system command: %s\n", fileDeleteBuffer);
+							strcat(fileDeleteBuffer, "*");
+							printf("system command: %s\n", fileDeleteBuffer);
+							system(fileDeleteBuffer);
+						}
+
+
+
+
 						strcat(filePath, directoryPath);
 						strcat(filePath, "/");
 						strcat(filePath, ".");

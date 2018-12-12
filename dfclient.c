@@ -48,58 +48,6 @@ typedef struct Files {
 void readConf(char* confName, ServerConf* servers, char** username, char** password);
 int getFileIndex(struct Files fileList[], char* fileName);
 
-int mod_hash(char *num) {
-    int res = 0;
-    unsigned long i;
-    for(i = 0; i < strlen(num); i++) {
-        // handle cases where num[i] is a to f
-        switch(num[i]) {
-            case 'a':
-                num[i] = 10;
-                break;
-            case 'b':
-                num[i] = 11;
-                break;
-            case 'c':
-                num[i] = 12;
-                break;
-            case 'd':
-                num[i] = 13;
-                break;
-            case 'e':
-                num[i] = 14;
-                break;
-            case 'f':
-                num[i] = 15;
-                break;
-            default:
-                num[i] = num[i] - '0';
-        }
-        res = (res*16 + num[i]) % 4; // following the rule xy (mod a) ≡ ((x (mod a) * y) (mod a))
-    }
-    return res;
-}
-
-int hash_file(char *file_name) {
-    char command[MAXBUFSIZE];
-    snprintf(command, MAXBUFSIZE, "md5 %s", file_name);
-    FILE *f = popen(command, "r");
-    char buf[MAXBUFSIZE];
-    while (fgets(buf, sizeof(buf), f) != 0) {
-        //printf("%s\n", buf);
-    }
-    pclose(f);
-    buf[strlen(buf) - 1] = '\0';
-    int i = 0;
-    while(buf[i] != '=') {
-        i++;
-    }
-
-    int hash = mod_hash(&buf[i+2]);
-    //printf("Hash Found: %d\n", hash);
-    return hash;
-}
-
 void sigpipe_handler()
 {
     printf("Connection to server lost\n");
@@ -147,6 +95,8 @@ int main (int argc, char * argv[])
   int pieceNum;
   int fileIndex;
   int len;
+  int randomNum;
+  time_t t;
 
   int n;
   char buf[512];
@@ -305,7 +255,7 @@ int main (int argc, char * argv[])
         write(socks[i], put, MAXBUFSIZE);
       }
 
-      printf("file hash: %i\n", system("md5 text.txt"));
+      srand((unsigned) time(&t));
 
       // Calculate each piece size in bytes
       pieceSize1 = fileSize / 4;
@@ -314,10 +264,21 @@ int main (int argc, char * argv[])
       pieceSize4 = (fileSize / 4) + (fileSize % 4);
       fd = open(splitInput, O_RDONLY);
       strcat(splitInput, " ");
-      printf("fileSize mod 4: %i\n", fileSize % 4);
+      //printf("fileSize mod 4: %i\n", fileSize % 4);
+      randomNum = rand() % 4;
+      printf("random seed: %i\n", randomNum);
+
+
+      // char* testString = "test";
+      // bzero(&sendBuffer,sizeof(sendBuffer));
+      // strcat(sendBuffer, "rm ");
+      // strcat(sendBuffer, testString);
+      // strcat(sendBuffer, "*");
+      //
+      // system(sendBuffer);
 
       // Send File
-      switch (2) {
+      switch (randomNum) {
         case 0:
           // First piece
           strcat(splitInput, "1");
