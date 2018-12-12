@@ -250,6 +250,12 @@ int main (int argc, char * argv[])
         fileSize = st.st_size; // In bytes
         printf("File Size: %i\n", fileSize);
       }
+      fd = open(splitInput, O_RDONLY);
+      if(fd < 0) {
+ 				 printf("Error opening file.\n");
+				 continue;
+ 			 }
+
 
       for(i = 0; i < SERVER_NUM; i++) {
         write(socks[i], put, MAXBUFSIZE);
@@ -262,7 +268,6 @@ int main (int argc, char * argv[])
       pieceSize2 = fileSize / 4;
       pieceSize3 = fileSize / 4;
       pieceSize4 = (fileSize / 4) + (fileSize % 4);
-      fd = open(splitInput, O_RDONLY);
       strcat(splitInput, " ");
       //printf("fileSize mod 4: %i\n", fileSize % 4);
       randomNum = rand() % 4;

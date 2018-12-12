@@ -43,6 +43,7 @@ int main (int argc, char * argv[] )
 	int fileSize;
 	int len;
 	char fileDeleteBuffer[MAXBUFSIZE];
+	bool fileExists = false;
 
 	DIR* dir;
 	struct dirent* in_file;
@@ -161,9 +162,6 @@ int main (int argc, char * argv[] )
 					nbytes = read(clientSock, buffer, MAXBUFSIZE);
 					printf("buffer: %s\n", buffer); // fileName
 
-					// send back which numbers you have and files. and client handles rest.
-					// for ls maybe just check if a connection is there?
-
 					printf("directoryPath%s\n", directoryPath);
 					dir = opendir(directoryPath);
 					if(dir == NULL) {
@@ -183,6 +181,7 @@ int main (int argc, char * argv[] )
 						fileName[strlen(fileName) - 1] = '\0';
 						printf("fileName pointer: %s\n", fileName);
 						if(!strcmp(buffer, fileName)) {
+							fileExists = true;
 		  			  bzero(&sendBuffer, sizeof(sendBuffer));
 		  			  bzero(&filePath, sizeof(filePath));
 							strcat(sendBuffer, &in_file->d_name[strlen(in_file->d_name) - 1]);
@@ -216,8 +215,20 @@ int main (int argc, char * argv[] )
 		  			  }
 			 	 		 	close(fp);
 						}
-						else {
-							printf("hit else\n");
+					}
+
+					printf("fileExists: %i\n", fileExists);
+
+					if(fileExists) {
+						fileExists = false;
+					}
+					else {
+						printf("sending outside loop\n");
+	  			  bzero(&sendBuffer, sizeof(sendBuffer));
+						len = write(clientSock, sendBuffer, MAXBUFSIZE);
+						len = write(clientSock, sendBuffer, MAXBUFSIZE);
+						if(len < 0) {
+							printf("ERROR ON SEND\n");
 						}
 					}
 					closedir(dir);
@@ -250,9 +261,6 @@ int main (int argc, char * argv[] )
 							printf("system command: %s\n", fileDeleteBuffer);
 							system(fileDeleteBuffer);
 						}
-
-
-
 
 						strcat(filePath, directoryPath);
 						strcat(filePath, "/");
