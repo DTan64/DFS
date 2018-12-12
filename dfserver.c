@@ -40,16 +40,13 @@ int main (int argc, char * argv[] )
   char authFalse[] = "INVALID";
 	char* splitInput;
 	int i;
-	int fileSize;
 	int len;
 	char fileDeleteBuffer[MAXBUFSIZE];
 	bool fileExists = false;
-
 	DIR* dir;
 	struct dirent* in_file;
-	struct stat st;
-
 	char* fileName;
+  int enable = 1;
 
 	if (argc != 3)
 	{
@@ -73,7 +70,6 @@ int main (int argc, char * argv[] )
     return -1;
 	}
 
-  int enable = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(int)) < 0) {
 		printf("Error on socket options.\n");
 		return -1;
@@ -89,8 +85,8 @@ int main (int argc, char * argv[] )
     printf("unable to listen on port\n");
     return -1;
   }
-  bzero(&client_addr, client_length);
 
+  bzero(&client_addr, client_length);
   signal(SIGINT, INThandler);
   while(listening) {
     // Accept Connection
@@ -132,7 +128,6 @@ int main (int argc, char * argv[] )
 				strcpy(directoryPath, filePath);
 				dir = opendir(filePath);
 				if(ENOENT == errno) {
-					printf("Directory doesn't exist\n");
  	 	  		bzero(&buffer, sizeof(buffer));
 					strcpy(buffer, filePath);
  	 	  		bzero(&filePath, sizeof(filePath));
@@ -152,17 +147,13 @@ int main (int argc, char * argv[] )
 				if(nbytes <= 0) {
 					break;
 				}
-				printf("Recieved: %s\n", buffer);
-
 
 				if(!strcmp(buffer, "get")) {
 				  printf("EXECUTING: %s\n", buffer);
 
 					bzero(&buffer,sizeof(buffer));
 					nbytes = read(clientSock, buffer, MAXBUFSIZE);
-					printf("buffer: %s\n", buffer); // fileName
 
-					printf("directoryPath%s\n", directoryPath);
 					dir = opendir(directoryPath);
 					if(dir == NULL) {
 						printf("Error opening directory\n");
@@ -173,24 +164,20 @@ int main (int argc, char * argv[] )
 					while((in_file = readdir(dir))) {
 						if(!strcmp(in_file->d_name, ".") || !strcmp(in_file->d_name, ".."))
 							continue;
-						printf("fileName %s\n", in_file->d_name);
 						fileName = (char *) malloc(255);
 						strcpy(fileName, in_file->d_name);
 						fileName++;
 						fileName[strlen(fileName) - 1] = '\0';
 						fileName[strlen(fileName) - 1] = '\0';
-						printf("fileName pointer: %s\n", fileName);
 						if(!strcmp(buffer, fileName)) {
 							fileExists = true;
 		  			  bzero(&sendBuffer, sizeof(sendBuffer));
 		  			  bzero(&filePath, sizeof(filePath));
 							strcat(sendBuffer, &in_file->d_name[strlen(in_file->d_name) - 1]);
-							printf("sendBuffer: %s\n", sendBuffer);
 							write(clientSock, &sendBuffer, MAXBUFSIZE);
 							strcat(filePath, directoryPath);
 							strcat(filePath, "/");
 							strcat(filePath, in_file->d_name);
-							printf("filePath: %s\n", filePath);
 
 							fp = open(filePath, O_RDONLY);
 		  			  if(fp < 0) {
@@ -200,13 +187,10 @@ int main (int argc, char * argv[] )
 
 		  			  bzero(&sendBuffer, sizeof(sendBuffer));
 		  			  while(1) {
-								printf("inside while loop %s\n", filePath);
 		  			 	  readBytes = read(fp, sendBuffer, sizeof(sendBuffer));
 		  			 	  if(readBytes == 0) {
-									printf("didn't read\n");
 									break;
 		  			 	  }
-								printf("sending: %s\n", sendBuffer);
 		  			 	  len = write(clientSock, sendBuffer, MAXBUFSIZE);
 								if(len < 0) {
 									printf("ERROR ON SEND\n");
@@ -217,13 +201,10 @@ int main (int argc, char * argv[] )
 						}
 					}
 
-					printf("fileExists: %i\n", fileExists);
-
 					if(fileExists) {
 						fileExists = false;
 					}
 					else {
-						printf("sending outside loop\n");
 	  			  bzero(&sendBuffer, sizeof(sendBuffer));
 						len = write(clientSock, sendBuffer, MAXBUFSIZE);
 						len = write(clientSock, sendBuffer, MAXBUFSIZE);
@@ -254,11 +235,8 @@ int main (int argc, char * argv[] )
 							strcat(fileDeleteBuffer, "rm ");
 							strcat(fileDeleteBuffer, directoryPath);
 							strcat(fileDeleteBuffer, "/.");
-							printf("system command: %s\n", fileDeleteBuffer);
 							strcat(fileDeleteBuffer, splitInput);
-							printf("system command: %s\n", fileDeleteBuffer);
 							strcat(fileDeleteBuffer, "*");
-							printf("system command: %s\n", fileDeleteBuffer);
 							system(fileDeleteBuffer);
 						}
 
@@ -269,7 +247,6 @@ int main (int argc, char * argv[] )
 						splitInput = strtok(NULL, " "); // piece number
 						strcat(filePath, ".");
 						strcat(filePath, splitInput);
-						printf("filePath[%i]: %s\n", i, filePath);
 
 						fd = fopen(filePath, "w+");
 			  		if(fd == NULL) {
@@ -286,12 +263,12 @@ int main (int argc, char * argv[] )
 			  			fprintf(fd, "%s", buffer);
 			  			bzero(&buffer, sizeof(buffer));
 			  		}
-						printf("outside while loop\n");
 						fclose(fd);
 					}
 		    }
 		    else if(!strcmp(buffer, "list")) {
 		      printf("EXECUTING: %s\n", buffer);
+
 					dir = opendir(directoryPath);
 					if(dir == NULL) {
 						printf("Error opening directory\n");
@@ -303,28 +280,15 @@ int main (int argc, char * argv[] )
 					while((in_file = readdir(dir))) {
 						if(!strcmp(in_file->d_name, ".") || !strcmp(in_file->d_name, ".."))
 							continue;
-						printf("fileName %s\n", in_file->d_name);
 						fileName = (char *) malloc(255);
 						strcpy(fileName, in_file->d_name);
 						fileName++;
 						fileName[strlen(fileName) - 1] = '\0';
 						fileName[strlen(fileName) - 1] = '\0';
-						printf("fileName pointer: %s\n", fileName);
 						strcat(sendBuffer, in_file->d_name);
 						strcat(sendBuffer, " ");
-
 					}
-					printf("sendBuffer: %s\n", sendBuffer);
 					write(clientSock, sendBuffer, MAXBUFSIZE);
-
-
-
-
-
-
-
-
-
 		    }
 				else if(!strcmp(buffer, "exit")) {
 		      printf("EXECUTING: %s\n", buffer);
@@ -338,10 +302,8 @@ int main (int argc, char * argv[] )
       close(clientSock);
       exit(0);
     }
-
     // Parent Process
     close(clientSock);
-
   }
 }
 
@@ -363,7 +325,6 @@ bool authHandler(char* credentials)
     printf("Error opening file.\n");
     exit(0);
   }
-
   while(fgets(fileBuffer, sizeof(fileBuffer), confFD) != NULL) {
     fileBuffer[strlen(fileBuffer) - 1] = '\0';
     if(!strcmp(fileBuffer, credentials)) {
